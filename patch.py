@@ -1,16 +1,7 @@
 import json
 import os
-import sys
-from PIL import Image
 from tqdm import tqdm
-
-if not os.path.exists("./twemoji"):
-  print('Cloning twemoji from github...')
-  os.system("git clone https://github.com/discord/twemoji")
-
-if not os.path.exists("./fluentui-emoji"):
-  print('Cloning fluentui-emoji from github...')
-  os.system("git clone https://github.com/microsoft/fluentui-emoji")
+from PIL import Image
 
 if os.path.exists("./discord_fluent"):
   print('Removing existing discord_fluent folder...')
@@ -19,37 +10,57 @@ if os.path.exists("./discord_fluent"):
 print('Creating discord_fluent folder...')
 os.system("cp -r ./twemoji ./discord_fluent")
 
-print('Patching fluentui-emoji into twemoji...')
 
-def patch(source_file, svg, unicode):
-  filename = ""
-  try:
-    directory = f"/{'Color' if svg else '3D'}"
-    filename = os.listdir(source_file + directory)[0]
-  except:
-    directory = f"/Default/{'Color' if svg else '3D'}"
-    filename = os.listdir(source_file + directory)[0]
-  if filename is not None:
-    if svg:
-      # copy f"{source_file + directory}/{filename}" to f"discord_fluent/assets/svg/{unicode}.svg"
-      with open(source_file + directory + "/" + filename, "r") as f:
-        data = f.read()
-      with open(f"./discord_fluent/assets/svg/{unicode}.svg", "w") as f:
-        f.write(data)
-    else:
-      image = Image.open(f'./{source_file + directory}/{filename}')
-      image = image.resize((72, 72))
-      image.save(f'./discord_fluent/assets/72x72/{unicode}.png')
+flags = {
+  '1f3fb': 'Light',
+  '1f3fc': 'Medium-Light',
+  '1f3fd': 'Medium',
+  '1f3fe': 'Medium-Dark',
+  '1f3ff': 'Dark'
+}
 
+print('Patching twemoji...')
 for asset_name in tqdm(os.listdir('fluentui-emoji/assets')):
   try:
     with open(f'fluentui-emoji/assets/{asset_name}/metadata.json', 'r') as f:
       data = json.load(f)
-      # TODO: Skintone support
-      unicode = data['unicode'].split(' ')[0]
-      if os.path.exists(f"./twemoji/assets/72x72/{data['unicode']}.png"):
-        patch(f'fluentui-emoji/assets/{asset_name}', False, unicode)
-        patch(f'fluentui-emoji/assets/{asset_name}', True, unicode)
+      variations = []
+      if 'unicodeSkintones' in data:
+        for variation in data['unicodeSkintones']:
+          key = ' '.join(variation.split(' ')[1:])
+          flag = flags[key] if key in flags else 'Default'
+          variations.append({ 'unicode': '-'.join(variation.split(' ')), 'child_path': f'{flag}/'  })
+      else:
+        variations.append({ 'unicode': '-'.join(data['unicode'].split(' ')), 'child_path': '' })
+      for variation in variations:
+        if os.path.exists(f"./twemoji/assets/72x72/{variation['unicode']}.png"):
+          # Copy 3D
+          file_name = os.listdir(f"./fluentui-emoji/assets/{asset_name}/{variation['child_path']}3D")[0]
+          image = Image.open(f'./fluentui-emoji/assets/{asset_name}/{variation["child_path"]}3D/{file_name}')
+          image72 = image.resize((72, 72))
+          image72.save(f'./discord_fluent/assets/72x72/{variation["unicode"]}.png')
+          # Copy SVG
+          file_name = os.listdir(f"./fluentui-emoji/assets/{asset_name}/{variation['child_path']}3D")[0]
+          with open(f'./fluentui-emoji/assets/{asset_name}/{variation["child_path"]}3D/{file_name}', 'rb') as f:
+            svg = f.read()
+          with open(f'./discord_fluent/assets/svg/{variation["unicode"]}.svg', 'wb') as f:
+            f.write(svg)
+      
+
   except Exception as e:
-    print("failed to patch emoji:", e)
+    print('failed to patch emoji:', e)
     pass
+
+with open('./discord_fluent/package.json', 'r') as f:
+  data = json.load(f)
+  data['name'] = 'discord-fluent-emoji'
+  data['description'] = 'Twemoji patched for Fluent UI Emoji for Discord'
+  data['version'] = '1.1.0'
+  data['files'] = [
+    "dist/twemoji*.js",
+    "dist/svg/*.svg",
+    "dist/72x72/*.png",
+    "index.d.ts"
+  ]
+  with open('./discord_fluent/package.json', 'w') as f2:
+    json.dump(data, f2, indent=2)
