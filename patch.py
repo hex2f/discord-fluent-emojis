@@ -40,8 +40,8 @@ for asset_name in tqdm(os.listdir('fluentui-emoji/assets')):
           image72 = image.resize((72, 72))
           image72.save(f'./discord_fluent/assets/72x72/{variation["unicode"]}.png')
           # Copy SVG
-          file_name = os.listdir(f"./fluentui-emoji/assets/{asset_name}/{variation['child_path']}3D")[0]
-          with open(f'./fluentui-emoji/assets/{asset_name}/{variation["child_path"]}3D/{file_name}', 'rb') as f:
+          file_name = os.listdir(f"./fluentui-emoji/assets/{asset_name}/{variation['child_path']}Color")[0]
+          with open(f'./fluentui-emoji/assets/{asset_name}/{variation["child_path"]}Color/{file_name}', 'rb') as f:
             svg = f.read()
           with open(f'./discord_fluent/assets/svg/{variation["unicode"]}.svg', 'wb') as f:
             f.write(svg)
@@ -55,7 +55,7 @@ with open('./discord_fluent/package.json', 'r') as f:
   data = json.load(f)
   data['name'] = 'discord-fluent-emoji'
   data['description'] = 'Twemoji patched for Fluent UI Emoji for Discord'
-  data['version'] = '1.1.0'
+  data['version'] = '1.1.1'
   data['files'] = [
     "dist/twemoji*.js",
     "dist/svg/*.svg",
