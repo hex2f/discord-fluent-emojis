@@ -29,10 +29,16 @@ for asset_name in tqdm(os.listdir('fluentui-emoji/assets')):
         for variation in data['unicodeSkintones']:
           key = ' '.join(variation.split(' ')[1:])
           flag = flags[key] if key in flags else 'Default'
-          variations.append({ 'unicode': '-'.join(variation.split(' ')), 'child_path': f'{flag}/'  })
+          variations.append({ 'unicode': '-'.join(variation.split(' ')).lstrip('0'), 'child_path': f'{flag}/'  })
       else:
-        variations.append({ 'unicode': '-'.join(data['unicode'].split(' ')), 'child_path': '' })
+        variations.append({ 'unicode': '-'.join(data['unicode'].split(' ')).lstrip('0'), 'child_path': '' })
       for variation in variations:
+        # fix for twemoji numbers
+        variation['unicode'] = variation['unicode'].replace('-fe0f', '')
+        if variation['child_path'] == '' and os.path.exists(f"./fluentui-emoji/assets/{asset_name}/{variation['child_path']}3D") == False:
+          variation['child_path'] = variation['child_path'] + 'Default/'
+        elif len(variation['child_path']) > 0 and os.path.exists(f"./fluentui-emoji/assets/{asset_name}/{variation['child_path']}3D") == False:
+          variation['child_path'] = ''
         if os.path.exists(f"./twemoji/assets/72x72/{variation['unicode']}.png"):
           # Copy 3D
           file_name = os.listdir(f"./fluentui-emoji/assets/{asset_name}/{variation['child_path']}3D")[0]
@@ -55,12 +61,16 @@ with open('./discord_fluent/package.json', 'r') as f:
   data = json.load(f)
   data['name'] = 'discord-fluent-emoji'
   data['description'] = 'Twemoji patched for Fluent UI Emoji for Discord'
-  data['version'] = '1.1.1'
+  data['version'] = '1.2.0'
+  data['author'] = 'Leah Lundqvist <leah@pigeon.sh>'
   data['files'] = [
     "dist/twemoji*.js",
     "dist/svg/*.svg",
     "dist/72x72/*.png",
     "index.d.ts"
+  ]
+  data['contributors'] = [
+    'Ian Mitchell <ian.mitchell@discordapp.com>'
   ]
   with open('./discord_fluent/package.json', 'w') as f2:
     json.dump(data, f2, indent=2)
